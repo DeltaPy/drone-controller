@@ -1,27 +1,48 @@
 import socket
+import pyshark
 import time
 
 droneIp = "172.16.10.1"
-dronePort = 8888
+droneTcpPort = 8888
+droneUdpPort = 8895
 
-magicPacket = b"/20/f4/1b/03/52/cd/34/2e/b6/52/e8/d8/08/00/45/00/00/3c/cb/cd/40/00/40/06/23/f4/ac/10/e8/d8/ac/10/0a/01/8f/77/22/b8/8c/1a/52/6e/00/00/00/00/a0/02/ff/ff/d2/94/00/00/02/04/05/b4/04/02/08/0a/00/14/99/a3/00/00/00/00/01/03/03/08/"
+cmd = "20f41b0352cd342eb652e8d8080045000024c4c0400040112b0eac10e8d8ac100a0121db22bf00102384cc80800080008033"
+cmd = bytes.fromhex(cmd)
+# print(dir(shark_cap[6]))
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print("Connecting to drone...")
 try:
-    s.connect((droneIp, dronePort))
+    tcpSocket.connect((droneIp, droneTcpPort))
 except:
-    print("Failed to connect to drone!")
-    print("Time out...")
+    print("Connection failed")
     exit()
-
-print("Connected to drone!")
-
+print("Connected to drone")
 time.sleep(3)
 print("Sending magic packet...")
-s.sendall(bytes(magicPacket))
+# shark_cap = pyshark.FileCapture(r"dump.pcap", display_filter="tcp")
+shark_cap = pyshark.FileCapture(r"dump.pcap", display_filter="ip.src==172.16.232.216 and tcp")
+# for i in [3, 9, 16, 20, 22, 24, 26, 28 ,30 ,32, 34]:
+for i in shark_cap:
+    # print("Frame number: ",shark_cap[i].number)
+    # print((shark_cap[i].tcp.payload).replace(":",""))
+    # magicPacket = (shark_cap[i].tcp.payload).replace(":","")
+    print("Frame number: ",i.number)
+    try:
+        print((i.tcp.payload).replace(":",""))
+        magicPacket = (i.tcp.payload).replace(":","")
+        tcpSocket.send(bytes.fromhex(magicPacket))
+    except:
+        print();
+
+print("Sent!")
 
 while True:
-    data = s.recv(1024)
-    print(data)
+    data = tcpSocket.recv(255)
+    print("Received:" ,data)
+    print("Decoded in hex: ",data.hex())
+    # udpSocket.sendto(cmd, (droneIp, droneUdpPort))
+    time.sleep(0.1)
 
 
